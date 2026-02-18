@@ -1,4 +1,4 @@
-# firetruck
+# 🚒 firetruck
 
 !!! NOTE: This repo is just an experiment for now, not ready for any kind of serious use. The package is not published on PyPI either !!!
 
