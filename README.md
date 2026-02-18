@@ -1,8 +1,8 @@
-# NumFire
+# firetruck
 
 !!! NOTE: This repo is just an experiment for now, not ready for any kind of serious use. The package is not published on PyPI either !!!
 
-NumFire is NumPyro dialect for mental midgets. This means:
+firetruck is NumPyro dialect for mental midgets. This means:
 
  - No `numpyro.deterministic` and `numpyro.sample`, just write your code like a normal human, and assign variables you want to track to `self`
  - You can just return your outcome variable from the function, no `obs` bullshit!
@@ -12,7 +12,7 @@ NumFire is NumPyro dialect for mental midgets. This means:
 
 ## Example
 
-I modified the Waffle House example in the [NumPyro docs](https://num.pyro.ai/en/stable/tutorials/bayesian_regression.html) to use NumFire.
+I modified the Waffle House example in the [NumPyro docs](https://num.pyro.ai/en/stable/tutorials/bayesian_regression.html) to use firetruck.
 
 ```python
 import jax as jax
@@ -20,7 +20,7 @@ import jax.numpy as jnp
 import numpyro.distributions as dist
 import pandas as pd
 
-import numfire as nf
+import firetruck as ftr
 
 DATASET_URL = "https://raw.githubusercontent.com/rmcelreath/rethinking/master/data/WaffleDivorce.csv"
 dset = pd.read_csv(DATASET_URL, sep=";")
@@ -30,7 +30,7 @@ age = jnp.array(dset["MedianAgeMarriage"])
 
 
 # Don't forget this decorator!! Very important
-@nf.compact
+@ftr.compact
 def model(self, marriage, age):
     # Just assign variables to self that you want to track,
     # And they will be named automatically!!
@@ -68,7 +68,7 @@ mcmc = conditioned_model.sample_posterior(subkey)
 # Number of divergences: 0
 
 # Plot sampling trace
-fig = nf.plot_trace(mcmc)
+fig = ftr.plot_trace(mcmc)
 fig.show()
 ```
 
