@@ -72,7 +72,8 @@ fig = ftr.plot_trace(mcmc)
 fig.show()
 ```
 
-![Trace plot](figures/trace.png)
+<img width="1200" alt="image" src="https://github.com/user-attachments/assets/5278fa25-8729-4a21-b393-e053be42c512" />
+
 
 ```python
 # Forest plot of posterior samples
@@ -80,7 +81,8 @@ fig = ftr.plot_forest(mcmc)
 fig.show()
 ```
 
-![Forest plot](figures/forest.png)
+<img width="1200" alt="image" src="https://github.com/user-attachments/assets/ccb64abf-92b2-437b-ac21-a44e09651486" />
+
 
 ```python
 # Forest plot of posterior samples
@@ -88,7 +90,8 @@ fig = ftr.plot_ess(mcmc)
 fig.show()
 ```
 
-![ESS plot](figures/ess.png)
+<img width="1200" alt="image" src="https://github.com/user-attachments/assets/8c21378d-6e20-43a3-b626-eb049f05252b" />
+
 
 ```python
 # Sampling prior predictive and plotting prior-predictive check
@@ -99,7 +102,8 @@ fig = ftr.plot_predictive_check(prior_predictive, obs=divorce)
 fig.show()
 ```
 
-![Prior predictive plot](figures/prior_predictive.png)
+<img width="1200" alt="image" src="https://github.com/user-attachments/assets/29e1f0a5-0488-43ac-a664-5d20da080ce4" />
+
 
 ```python
 # Sampling posterior predictive and plotting prior-predictive check
@@ -109,8 +113,7 @@ posterior_predictive = model.add_input(marriage, age).sample_predictive(
     rng_key, posterior_samples=mcmc.get_samples()
 )
 fig = ftr.plot_predictive_check(posterior_predictive, obs=divorce)
-fig = fig.write_image("figures/posterior_predictive_check.png")
-fig = fig.update_layout(width=1200, height=600)
+fig.show()
 ```
 
 ![Posterior predictive plot](figures/posterior_predictive.png)
