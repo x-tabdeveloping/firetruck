@@ -35,7 +35,7 @@ def get_rvs(mcmc):
 def get_divergences(mcmc):
     extra_fields = mcmc.get_extra_fields(group_by_chain=True)
     if "diverging" in extra_fields:
-        return jnp.max(extra_fields["diverging"], axis=0)
+        return extra_fields["diverging"]
     else:
         return None
 
@@ -61,19 +61,20 @@ def plot_trace(mcmc: MCMC, variables: list[str] | None = None):
     colors = px.colors.qualitative.Dark24
     for i_variable, var_name in enumerate(variables):
         var_samples = samples[var_name]
-        div_ind, *_ = jnp.where(divergences)
-        var_range = jnp.max(var_samples) - jnp.min(var_samples)
-        fig.add_scatter(
-            name="Divergences",
-            y=[jnp.min(var_samples) - var_range * 0.1] * len(div_ind),
-            x=div_ind,
-            marker=dict(color="black", symbol="line-ns-open", size=12),
-            mode="markers",
-            col=2,
-            showlegend=False,
-            row=i_variable + 1,
-        )
         for i_chain, chain in enumerate(var_samples):
+            chain_divergences = divergences[i_chain]
+            div_ind, *_ = jnp.where(chain_divergences)
+            var_range = jnp.max(var_samples) - jnp.min(var_samples)
+            fig.add_scatter(
+                name="Divergences",
+                y=[jnp.min(var_samples) - var_range * 0.1] * len(div_ind),
+                x=div_ind,
+                marker=dict(color="black", symbol="line-ns-open", size=12),
+                mode="markers",
+                col=2,
+                showlegend=False,
+                row=i_variable + 1,
+            )
             chain = jnp.reshape(chain, (-1, chain.shape[-1]))
             dash = dashes[i_chain % len(dashes)]
             for i_level, level in enumerate(chain):
@@ -95,6 +96,16 @@ def plot_trace(mcmc: MCMC, variables: list[str] | None = None):
                     col=1,
                     line=dict(color=color, dash=dash),
                     showlegend=False,
+                )
+                fig.add_scatter(
+                    name="Divergences",
+                    y=[0] * len(div_ind),
+                    x=level[div_ind],
+                    marker=dict(color="black", symbol="line-ns-open", size=12),
+                    mode="markers",
+                    col=1,
+                    showlegend=False,
+                    row=i_variable + 1,
                 )
     fig = fig.update_layout(template="plotly_white", margin=dict(t=20, b=0, l=0, r=0))
     return fig
