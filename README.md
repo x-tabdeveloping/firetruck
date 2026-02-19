@@ -73,3 +73,44 @@ fig.show()
 ```
 
 ![Trace plot](figures/trace.png)
+
+```python
+# Forest plot of posterior samples
+fig = ftr.plot_forest(mcmc)
+fig.show()
+```
+
+![Forest plot](figures/forest.png)
+
+```python
+# Forest plot of posterior samples
+fig = ftr.plot_ess(mcmc)
+fig.show()
+```
+
+![ESS plot](figures/ess.png)
+
+```python
+# Sampling prior predictive and plotting prior-predictive check
+rng_key, subkey = jax.random.split(rng_key)
+# NOTE that I'm using the unconditoned model
+prior_predictive = model.add_input(marriage, age).sample_predictive(rng_key)
+fig = ftr.plot_predictive_check(prior_predictive, obs=divorce)
+fig.show()
+```
+
+![Prior predictive plot](figures/prior_predictive.png)
+
+```python
+# Sampling posterior predictive and plotting prior-predictive check
+rng_key, subkey = jax.random.split(rng_key)
+# Note that I'm passing the posterior_samples to the function
+posterior_predictive = model.add_input(marriage, age).sample_predictive(
+    rng_key, posterior_samples=mcmc.get_samples()
+)
+fig = ftr.plot_predictive_check(posterior_predictive, obs=divorce)
+fig = fig.write_image("figures/posterior_predictive_check.png")
+fig = fig.update_layout(width=1200, height=600)
+```
+
+![Posterior predictive plot](figures/posterior_predictive.png)
