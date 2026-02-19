@@ -42,7 +42,7 @@ class compact(Messenger):
         self,
         rng_key,
         *model_args,
-        num_samples: int = 1000,
+        num_samples: int = 100,
         posterior_samples: dict = None,
         params: dict = None,
         **model_kwargs,
