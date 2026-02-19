@@ -2,6 +2,7 @@ from operator import attrgetter
 
 import jax.numpy as jnp
 from jax.scipy.stats import gaussian_kde
+from numpyro.diagnostics import hpdi
 from numpyro.infer import MCMC
 
 
@@ -107,5 +108,68 @@ def plot_trace(mcmc: MCMC, variables: list[str] | None = None):
                     showlegend=False,
                     row=i_variable + 1,
                 )
+    fig = fig.update_layout(template="plotly_white", margin=dict(t=20, b=0, l=0, r=0))
+    return fig
+
+
+def plot_forest(
+    samples_or_mcmc: MCMC | dict, prob: float = 0.94, variables: list[str] | None = None
+):
+    px, go, subplots = get_plotly()
+    if isinstance(samples_or_mcmc, MCMC):
+        samples = samples_or_mcmc.get_samples()
+        mcmc = samples_or_mcmc
+    else:
+        samples = samples_or_mcmc
+        mcmc = None
+    if variables is None:
+        if mcmc is not None:
+            variables = get_rvs(mcmc)
+        else:
+            variables = samples.keys()
+    colors = px.colors.qualitative.Dark24
+    fig = go.Figure()
+    for i_variable, var_name in enumerate(variables):
+        var_samples = samples[var_name]
+        var_samples = jnp.reshape(var_samples, (-1, var_samples.shape[-1]))
+        for i_level, level in enumerate(var_samples):
+            lower, upper = hpdi(level, prob=prob)
+            center = jnp.median(level)
+            name = var_name
+            if var_samples.shape[0] != 1:
+                name += f"[{i_level}]"
+            fig.add_scatter(
+                y0=var_name,
+                x=[center],
+                error_x=dict(
+                    type="data",
+                    symmetric=False,
+                    array=[upper - center],
+                    arrayminus=[center - lower],
+                    width=0,
+                    thickness=1,
+                ),
+                marker=dict(color=colors[i_level]),
+                name=var_name,
+                showlegend=False,
+                mode="markers",
+            )
+            lower, upper = hpdi(level, prob=0.5)
+            fig.add_scatter(
+                y0=var_name,
+                x=[center],
+                error_x=dict(
+                    type="data",
+                    symmetric=False,
+                    array=[upper - center],
+                    arrayminus=[center - lower],
+                    width=0,
+                    thickness=3,
+                ),
+                marker=dict(color=colors[i_level]),
+                name=var_name,
+                showlegend=False,
+                mode="markers",
+            )
     fig = fig.update_layout(template="plotly_white", margin=dict(t=20, b=0, l=0, r=0))
     return fig
