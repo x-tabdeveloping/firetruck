@@ -8,7 +8,7 @@ firetruck is NumPyro dialect for mental midgets. This means:
  - You can just return your outcome variable from the function, no `obs` bullshit!
  - Greatly simplified sampling and VI. No bespoke solutions, just good defaults for 90% of your use cases.
  - You can deal with latent categorical variables without having to do anything, yaaay!
- - No Arviz, no matplotlib, just some trusty, modifiable Plotly plots. It ain't much, but it'll get you most of the way.
+ - WebGL accelarated Plotly plots. You don't know ArViz, Matplotlib or any of that jazz. It not only looks better but it's also interactive and faster.
 
 ## Example
 
