@@ -1,0 +1,29 @@
+[tool.black]
+line-length=79
+
+[tool.ruff]
+line-length=79
+
+[tool.isort]
+profile = "black"
+
+[project]
+name = "firetruck"
+version = "0.1.0"
+description = "NumPyro dialect for mental midgets"
+authors = [
+    {name = "Márton Kardos",email = "power.up1163@gmail.com"}
+]
+license = {text = "MIT"}
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = [
+    "numpyro (>=0.20.0,<0.21.0)"
+]
+
+[project.optional-dependencies]
+plotly = ["plotly>=6.0.0,<7.0.0"]
+
+[build-system]
+requires = ["poetry-core>=2.0.0,<3.0.0"]
+build-backend = "poetry.core.masonry.api"
