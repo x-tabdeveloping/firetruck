@@ -102,7 +102,8 @@ fig = ftr.plot_predictive_check(prior_predictive, obs=divorce)
 fig.show()
 ```
 
-<img width="1200" alt="image" src="https://github.com/user-attachments/assets/29e1f0a5-0488-43ac-a664-5d20da080ce4" />
+<img width="1500" height="762" alt="image" src="https://github.com/user-attachments/assets/a81e7325-81f4-448b-83b9-f8e200de336b" />
+
 
 
 ```python
@@ -116,4 +117,4 @@ fig = ftr.plot_predictive_check(posterior_predictive, obs=divorce)
 fig.show()
 ```
 
-![Posterior predictive plot](figures/posterior_predictive.png)
+<img width="1500" height="762" alt="image" src="https://github.com/user-attachments/assets/acb5378c-db97-4618-bd77-c0a478e78f10" />
