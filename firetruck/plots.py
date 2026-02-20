@@ -256,11 +256,10 @@ def plot_predictive_check(
                 showlegend=i_draw == 0,
             )
         )
-    mean_draw = jnp.mean(jnp.reshape(samples, (samples.shape[0], -1)), axis=0)
     fig.add_trace(
         go.Scattergl(
             x=grid,
-            y=gaussian_kde(mean_draw).pdf(grid),
+            y=gaussian_kde(jnp.ravel(samples)).pdf(grid),
             line=dict(color="#1616A7", dash="dash", width=3),
             name="Predictive mean",
             showlegend=True,
