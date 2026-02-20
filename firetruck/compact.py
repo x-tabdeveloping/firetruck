@@ -5,8 +5,15 @@ import jax.numpy as jnp
 import numpyro
 import numpyro.distributions as dist
 from numpyro.handlers import seed, trace
-from numpyro.infer import (MCMC, NUTS, SVI, DiscreteHMCGibbs, Predictive,
-                           TraceGraph_ELBO, TraceMeanField_ELBO)
+from numpyro.infer import (
+    MCMC,
+    NUTS,
+    SVI,
+    DiscreteHMCGibbs,
+    Predictive,
+    TraceGraph_ELBO,
+    TraceMeanField_ELBO,
+)
 from numpyro.infer.autoguide import AutoNormal
 from numpyro.primitives import Messenger
 
@@ -45,6 +52,7 @@ class compact(Messenger):
         num_samples: int = 100,
         posterior_samples: dict = None,
         params: dict = None,
+        exclude_deterministic: bool = True,
         **model_kwargs,
     ):
         pred = Predictive(
@@ -52,6 +60,7 @@ class compact(Messenger):
             num_samples=num_samples,
             posterior_samples=posterior_samples,
             params=params,
+            exclude_deterministic=exclude_deterministic,
         )
         return pred(rng_key, *model_args, **model_kwargs)
 
