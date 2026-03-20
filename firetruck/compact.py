@@ -4,7 +4,7 @@ import jax
 import jax.numpy as jnp
 import numpyro
 import numpyro.distributions as dist
-from numpyro.handlers import seed, trace
+from numpyro.handlers import reparam, seed, trace
 from numpyro.infer import (
     MCMC,
     NUTS,
@@ -15,6 +15,7 @@ from numpyro.infer import (
     TraceMeanField_ELBO,
 )
 from numpyro.infer.autoguide import AutoNormal
+from numpyro.infer.reparam import LocScaleReparam
 from numpyro.primitives import Messenger
 
 
@@ -44,6 +45,22 @@ class compact(Messenger):
 
     def add_input(self, *args, **kwargs):
         return compact(partial(self, *args, **kwargs), top_level=False)
+
+    def reparam(self, config):
+        return compact(reparam(self, config=config), top_level=False)
+
+    @property
+    def sites(self):
+        return trace(seed(self, jax.random.key(0))).get_trace()
+
+    def auto_noncentered_reparam(self):
+        config = {}
+        for site_name, site in self.sites.items():
+            is_observed = site["is_observed"] or (site["name"] == "obs")
+            is_real = site["fn"].support == dist.constraints.real
+            if not is_observed and is_real:
+                config[site_name] = LocScaleReparam(0)
+        return self.reparam(config)
 
     def sample_predictive(
         self,
