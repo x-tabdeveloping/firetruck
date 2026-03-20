@@ -154,7 +154,7 @@ def plot_forest(
             if var_samples.shape[0] != 1:
                 name += f"[{i_level}]"
             fig.add_scatter(
-                y0=var_name,
+                y0=name,
                 x=[center],
                 error_x=dict(
                     type="data",
@@ -165,13 +165,13 @@ def plot_forest(
                     thickness=2.5,
                 ),
                 marker=dict(color=colors[i_level % len(colors)]),
-                name=var_name,
+                name=name,
                 showlegend=False,
                 mode="markers",
             )
             lower, upper = hpdi(level, prob=0.5)
             fig.add_scatter(
-                y0=var_name,
+                y0=name,
                 x=[center],
                 error_x=dict(
                     type="data",
@@ -182,7 +182,7 @@ def plot_forest(
                     thickness=5,
                 ),
                 marker=dict(color=colors[i_level % len(colors)], size=12),
-                name=var_name,
+                name=name,
                 showlegend=False,
                 mode="markers",
             )
