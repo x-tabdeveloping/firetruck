@@ -109,19 +109,25 @@ def plot_trace(mcmc: MCMC, variables: list[str] | None = None):
                         name="Divergences",
                         y=[0] * len(div_ind),
                         x=level[div_ind],
-                        marker=dict(color="black", symbol="line-ns-open", size=12),
+                        marker=dict(
+                            color="black", symbol="line-ns-open", size=12
+                        ),
                         mode="markers",
                         showlegend=False,
                     ),
                     col=1,
                     row=i_variable + 1,
                 )
-    fig = fig.update_layout(template="plotly_white", margin=dict(t=20, b=0, l=0, r=0))
+    fig = fig.update_layout(
+        template="plotly_white", margin=dict(t=20, b=0, l=0, r=0)
+    )
     return fig
 
 
 def plot_forest(
-    samples_or_mcmc: MCMC | dict, prob: float = 0.94, variables: list[str] | None = None
+    samples_or_mcmc: MCMC | dict,
+    prob: float = 0.94,
+    variables: list[str] | None = None,
 ):
     px, go, subplots = get_plotly()
     if isinstance(samples_or_mcmc, MCMC):
@@ -179,7 +185,9 @@ def plot_forest(
                 showlegend=False,
                 mode="markers",
             )
-    fig = fig.update_layout(template="plotly_white", margin=dict(t=20, b=0, l=0, r=0))
+    fig = fig.update_layout(
+        template="plotly_white", margin=dict(t=20, b=0, l=0, r=0)
+    )
     return fig
 
 
@@ -204,9 +212,9 @@ def plot_ess(mcmc: MCMC | dict, variables: list[str] | None = None):
             if var_samples.shape[0] != 1:
                 name += f"[{i_level}]"
             n_draws = level.shape[-1]
-            grid = list(range(min(50, n_draws), n_draws, (n_draws - 20) // 20)) + [
-                n_draws
-            ]
+            grid = list(
+                range(min(50, n_draws), n_draws, (n_draws - 20) // 20)
+            ) + [n_draws]
             ess = []
             for upper in grid:
                 ess.append(effective_sample_size(level[:, :upper]))
@@ -228,11 +236,76 @@ def plot_ess(mcmc: MCMC | dict, variables: list[str] | None = None):
     return fig
 
 
+def is_discrete(a):
+    return a.dtype in [
+        jnp.bool_,
+        jnp.int16,
+        jnp.int32,
+        jnp.int64,
+        jnp.uint16,
+        jnp.uint32,
+        jnp.uint64,
+    ]
+
+
+def _predictive_check_continuous(fig, grid, samples, obs=None):
+    for i_draw, draw in enumerate(samples):
+        draw = jnp.ravel(draw)
+        y_draw = gaussian_kde(draw).pdf(grid)
+        fig = fig.add_scattergl(
+            x=grid,
+            y=y_draw,
+            line=dict(color="#2E91E5"),
+            opacity=0.2,
+            name="Predictive",
+            showlegend=i_draw == 0,
+        )
+    if obs is not None:
+        fig = fig.add_scattergl(
+            x=grid,
+            y=gaussian_kde(obs).pdf(grid),
+            line=dict(color="black", width=3),
+            name="Observed",
+            showlegend=True,
+        )
+    return fig
+
+
+def _predictive_check_discrete(fig, grid, samples, obs=None):
+    N = samples.shape[-1]
+    for i_draw, draw in enumerate(samples):
+        draw = jnp.ravel(draw)
+        values, counts = jnp.unique_counts(draw)
+        fig = fig.add_bar(
+            x=values,
+            y=counts / N,
+            marker=dict(
+                color="rgba(0,0,0,0)", line=dict(color="#2E91E5", width=1)
+            ),
+            opacity=0.2,
+            name="Predictive",
+            showlegend=i_draw == 0,
+        )
+    if obs is not None:
+        values, counts = jnp.unique_counts(obs)
+        fig = fig.add_bar(
+            x=values,
+            y=counts / N,
+            marker=dict(
+                color="rgba(0,0,0,0)", line=dict(color="black", width=3)
+            ),
+            name="Observed",
+            showlegend=True,
+        )
+    fig = fig.update_layout(barmode="overlay")
+    return fig
+
+
 def plot_predictive_check(
     prior_or_posterior_predictive: dict,
     obs=None,
     obs_name: str = "obs",
-    n_grid_points: int = 1000,
+    n_grid_points: int = 250,
 ):
     px, go, subplots = get_plotly()
     samples = prior_or_posterior_predictive[obs_name]
@@ -243,38 +316,10 @@ def plot_predictive_check(
         highest = max(jnp.max(obs), highest)
     grid = jnp.linspace(lowest, highest, n_grid_points)
     fig = go.Figure()
-    for i_draw, draw in enumerate(samples):
-        draw = jnp.ravel(draw)
-        y_draw = gaussian_kde(draw).pdf(grid)
-        fig.add_trace(
-            go.Scattergl(
-                x=grid,
-                y=y_draw,
-                line=dict(color="#2E91E5"),
-                opacity=0.2,
-                name="Predictive",
-                showlegend=i_draw == 0,
-            )
-        )
-    fig.add_trace(
-        go.Scattergl(
-            x=grid,
-            y=gaussian_kde(jnp.ravel(samples)).pdf(grid),
-            line=dict(color="#1616A7", dash="dash", width=3),
-            name="Predictive mean",
-            showlegend=True,
-        )
-    )
-    if obs is not None:
-        fig.add_trace(
-            go.Scattergl(
-                x=grid,
-                y=gaussian_kde(obs).pdf(grid),
-                line=dict(color="black", width=3),
-                name="Observed",
-                showlegend=True,
-            )
-        )
+    if is_discrete(samples) and is_discrete(obs):
+        fig = _predictive_check_discrete(fig, grid, samples, obs)
+    else:
+        fig = _predictive_check_continuous(fig, grid, samples, obs)
     fig = fig.update_layout(
         template="plotly_white",
         margin=dict(t=20, b=20, l=20, r=20),
