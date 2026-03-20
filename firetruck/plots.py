@@ -1,9 +1,10 @@
 from operator import attrgetter
 
+import jax
 import jax.numpy as jnp
 from jax.scipy.stats import gaussian_kde
 from numpyro.diagnostics import effective_sample_size, hpdi
-from numpyro.infer import MCMC
+from numpyro.infer import MCMC, Predictive
 
 
 def get_plotly():
@@ -320,6 +321,65 @@ def plot_predictive_check(
         fig = _predictive_check_discrete(fig, grid, samples, obs)
     else:
         fig = _predictive_check_continuous(fig, grid, samples, obs)
+    fig = fig.update_layout(
+        template="plotly_white",
+        margin=dict(t=20, b=20, l=20, r=20),
+        xaxis_title="Outcome",
+        yaxis_title="Density",
+    )
+    return fig
+
+
+def plot_prior_posterior_update(
+    model, mcmc, *model_args, variables=None, n_grid_points=250, **model_kwargs
+):
+    px, go, subplots = get_plotly()
+    rvs = get_rvs(mcmc)
+    if variables is not None:
+        rvs = list(set(rvs).intersection(set(variables)))
+    samples = mcmc.get_samples()
+    prior_samples = Predictive(
+        model,
+        num_samples=samples[rvs[0]].shape[0],
+        exclude_deterministic=True,
+    )(jax.random.key(0), *model_args, **model_kwargs)
+    fig = subplots.make_subplots(cols=1, rows=len(rvs), subplot_titles=rvs)
+    for i_rv, rv in enumerate(rvs):
+        post = samples[rv]
+        prior = prior_samples[rv]
+        post = jnp.reshape(post, (-1, post.shape[-1]))
+        prior = jnp.reshape(prior, (-1, prior.shape[-1]))
+        colors = px.colors.qualitative.Dark24
+        for i_level, (post_level, prior_level) in enumerate(zip(post, prior)):
+            post_level = jnp.ravel(post_level)
+            prior_level = jnp.ravel(prior_level)
+            val_range = min(jnp.min(post_level), jnp.min(prior_level)), max(
+                jnp.max(post_level), jnp.max(prior_level)
+            )
+            grid = jnp.linspace(*val_range, n_grid_points)
+            color = colors[i_level]
+            fig = fig.add_scattergl(
+                x=grid,
+                y=gaussian_kde(prior_level).pdf(grid),
+                line=dict(color=color, width=2, dash="dash"),
+                showlegend=i_rv == 0,
+                opacity=0.5,
+                row=i_rv + 1,
+                col=1,
+                name="Prior",
+            )
+            fig = fig.add_scattergl(
+                x=grid,
+                y=gaussian_kde(post_level).pdf(grid),
+                line=dict(color=color, width=2),
+                showlegend=i_rv == 0,
+                opacity=1.0,
+                row=i_rv + 1,
+                col=1,
+                name="Posterior",
+            )
+    fig = fig.update_xaxes(title="Values", row=len(rvs))
+    fig = fig.update_yaxes(title="Density")
     fig = fig.update_layout(
         template="plotly_white",
         margin=dict(t=20, b=20, l=20, r=20),
