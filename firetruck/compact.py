@@ -4,7 +4,7 @@ import jax
 import jax.numpy as jnp
 import numpyro
 import numpyro.distributions as dist
-from numpyro.handlers import reparam, seed, trace
+from numpyro.handlers import do, reparam, seed, trace
 from numpyro.infer import (
     MCMC,
     NUTS,
@@ -45,6 +45,9 @@ class compact(Messenger):
 
     def add_input(self, *args, **kwargs):
         return compact(partial(self, *args, **kwargs), top_level=False)
+
+    def do(self, data: dict):
+        return compact(do(self, data=data), top_level=False)
 
     def reparam(self, config):
         return compact(reparam(self, config=config), top_level=False)
