@@ -9,7 +9,7 @@ profile = "black"
 
 [project]
 name = "firetruck"
-version = "0.1.4"
+version = "0.1.5"
 description = "NumPyro dialect for mental midgets"
 authors = [
     {name = "Márton Kardos",email = "power.up1163@gmail.com"}
