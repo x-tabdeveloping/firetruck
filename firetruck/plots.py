@@ -7,6 +7,13 @@ from numpyro.diagnostics import effective_sample_size, hpdi
 from numpyro.infer import MCMC, Predictive
 
 
+def to_levels(chain):
+    if len(chain.shape) == 0:
+        return jnp.reshape(chain, (1, chain.shape[0]))
+    else:
+        return jnp.reshape(chain, (-1, chain.shape[0]))
+
+
 def get_plotly():
     try:
         import plotly.express as px
@@ -79,7 +86,7 @@ def plot_trace(mcmc: MCMC, variables: list[str] | None = None):
                 col=2,
                 row=i_variable + 1,
             )
-            chain = jnp.reshape(chain, (-1, chain.shape[-1]))
+            chain = to_levels(chain)
             dash = dashes[i_chain % len(dashes)]
             for i_level, level in enumerate(chain):
                 dens = gaussian_kde(level)
@@ -146,7 +153,7 @@ def plot_forest(
     fig = go.Figure()
     for i_variable, var_name in enumerate(variables):
         var_samples = samples[var_name]
-        var_samples = jnp.reshape(var_samples, (-1, var_samples.shape[-1]))
+        var_samples = to_levels(var_samples)
         for i_level, level in enumerate(var_samples):
             lower, upper = hpdi(level, prob=prob)
             center = jnp.median(level)
