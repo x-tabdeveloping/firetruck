@@ -8,10 +8,15 @@ from numpyro.infer import MCMC, Predictive
 
 
 def to_levels(chain):
-    if len(chain.shape) == 0:
-        return jnp.reshape(chain, (1, chain.shape[0]))
+    n_samples = chain.shape[0]
+    if len(chain.shape) == 2:
+        chain = chain.T
+    elif len(chain.shape) == 1:
+        chain = chain[None, :]
     else:
-        return jnp.reshape(chain, (-1, chain.shape[0]))
+        chain = chain.T
+        chain = jnp.reshape(chain, (-1, n_samples))
+    return chain
 
 
 def get_plotly():
@@ -245,15 +250,13 @@ def plot_ess(mcmc: MCMC | dict, variables: list[str] | None = None):
 
 
 def is_discrete(a):
-    return a.dtype in [
-        jnp.bool_,
-        jnp.int16,
-        jnp.int32,
-        jnp.int64,
-        jnp.uint16,
-        jnp.uint32,
-        jnp.uint64,
-    ]
+    if a.dtype.name.startswith("int"):
+        return True
+    if a.dtype.name.startswith("bool"):
+        return True
+    if a.dtype.name.startswith("uint"):
+        return True
+    return False
 
 
 def _predictive_check_continuous(fig, grid, samples, obs=None):
@@ -354,9 +357,9 @@ def plot_prior_posterior_update(
     for i_rv, rv in enumerate(rvs):
         post = samples[rv]
         prior = prior_samples[rv]
-        post = jnp.reshape(post, (-1, post.shape[-1]))
-        prior = jnp.reshape(prior, (-1, prior.shape[-1]))
-        colors = px.colors.qualitative.Dark24
+        post = to_levels(post)
+        prior = to_levels(prior)
+        colors = list(px.colors.qualitative.Dark24)
         for i_level, (post_level, prior_level) in enumerate(zip(post, prior)):
             post_level = jnp.ravel(post_level)
             prior_level = jnp.ravel(prior_level)
@@ -364,7 +367,7 @@ def plot_prior_posterior_update(
                 jnp.max(post_level), jnp.max(prior_level)
             )
             grid = jnp.linspace(*val_range, n_grid_points)
-            color = colors[i_level]
+            color = colors[i_level % len(colors)]
             fig = fig.add_scattergl(
                 x=grid,
                 y=gaussian_kde(prior_level).pdf(grid),
