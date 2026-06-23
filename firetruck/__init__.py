@@ -1,4 +1,5 @@
 from firetruck.compact import compact
+from firetruck.diagnostics import compare
 from firetruck.plots import (
     plot_ess,
     plot_forest,

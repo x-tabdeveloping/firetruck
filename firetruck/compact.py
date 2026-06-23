@@ -4,7 +4,7 @@ import jax
 import jax.numpy as jnp
 import numpyro
 import numpyro.distributions as dist
-from numpyro.handlers import do, reparam, seed, trace
+from numpyro.handlers import condition, do, reparam, seed, substitute, trace
 from numpyro.infer import (
     MCMC,
     NUTS,
@@ -16,7 +16,10 @@ from numpyro.infer import (
 )
 from numpyro.infer.autoguide import AutoNormal
 from numpyro.infer.reparam import LocScaleReparam
+from numpyro.infer.util import log_likelihood
 from numpyro.primitives import Messenger
+
+from .diagnostics import psis_loo
 
 
 class compact(Messenger):
@@ -40,8 +43,17 @@ class compact(Messenger):
             self.obs = obs
         return obs
 
-    def condition_on(self, obs):
-        return conditioned(self, obs=obs)
+    def seed(self, rng_key):
+        return compact(seed(self, rng_key), top_level=False)
+
+    def condition_on(self, data):
+        return self.condition(data)
+
+    def condition(self, data):
+        if isinstance(data, dict):
+            return compact(condition(self, data), top_level=False)
+        else:
+            return compact(condition(self, {"obs": data}), top_level=False)
 
     def add_input(self, *args, **kwargs):
         return compact(partial(self, *args, **kwargs), top_level=False)
@@ -49,21 +61,41 @@ class compact(Messenger):
     def do(self, data: dict):
         return compact(do(self, data=data), top_level=False)
 
+    def substitute(self, data: dict):
+        return compact(substitute(self, data=data), top_level=False)
+
     def reparam(self, config):
         return compact(reparam(self, config=config), top_level=False)
 
-    @property
-    def sites(self):
-        return trace(seed(self, jax.random.key(0))).get_trace()
+    def get_trace(self, rng_key=None):
+        if rng_key is None:
+            rng_key = jax.random.key(0)
+        return trace(self.seed(rng_key)).get_trace()
+
+    def sites(self, rng_key=None):
+        return self.get_trace(rng_key)
 
     def auto_noncentered_reparam(self):
         config = {}
-        for site_name, site in self.sites.items():
+        for site_name, site in self.sites().items():
             is_observed = site["is_observed"] or (site["name"] == "obs")
             is_real = site["fn"].support == dist.constraints.real
             if not is_observed and is_real:
                 config[site_name] = LocScaleReparam(0)
         return self.reparam(config)
+
+    def log_likelihood(self, posterior_samples, data=None):
+        if data is not None:
+            model = self.condition(data)
+        else:
+            model = self
+        return log_likelihood(model, posterior_samples)
+
+    def psis_loo(self, posterior_samples, show_progress_bar=True):
+        return psis_loo(
+            self.log_likelihood(posterior_samples),
+            show_progress_bar=show_progress_bar,
+        )
 
     def sample_predictive(
         self,
@@ -83,22 +115,6 @@ class compact(Messenger):
             exclude_deterministic=exclude_deterministic,
         )
         return pred(rng_key, *model_args, **model_kwargs)
-
-
-class conditioned(compact):
-    def __init__(
-        self,
-        fn,
-        obs,
-    ) -> None:
-        self.obs = jnp.array(obs)
-        super(conditioned, self).__init__(fn, top_level=False)
-
-    def process_message(self, msg) -> None:
-        if msg["name"] != "obs":
-            return
-        msg["value"] = self.obs
-        msg["is_observed"] = True
 
     def _has_latent_discrete(self, *model_args, **model_kwargs) -> bool:
         # We use init strategy to get around ImproperUniform which does not have
@@ -152,6 +168,7 @@ class conditioned(compact):
         rng_key,
         *model_args,
         num_steps: int = 10_000,
+        num_samples: int = 1000,
         step_size: float = 1e-4,
         **model_kwargs,
     ):
@@ -164,7 +181,28 @@ class conditioned(compact):
         else:
             loss = TraceMeanField_ELBO()
         svi = SVI(self, guide, optimizer, loss=loss)
+        rng_key, subkey = jax.random.split(rng_key)
         svi_result = svi.run(
-            rng_key, num_steps, *model_args, stable_update=True, **model_kwargs
+            subkey, num_steps, *model_args, stable_update=True, **model_kwargs
         )
-        return svi_result
+        params = svi_result.params
+        predictive = Predictive(
+            self, guide=guide, params=params, num_samples=1000
+        )
+        predictive = Predictive(guide, params=params, num_samples=num_samples)
+        rng_key, subkey = jax.random.split(rng_key)
+        posterior_samples = predictive(subkey)
+        return posterior_samples
+
+    def to_dist(
+        self, rng_key=None, outcome_site="obs", **params
+    ) -> dist.Distribution:
+        return self.get_trace(rng_key)[outcome_site]["fn"]
+
+    def simulate(self, rng_key, params: dict) -> dict:
+        trace = self.substitute(params).get_trace(rng_key)
+        return {
+            site_name: site["value"]
+            for site_name, site in trace.items()
+            if (site["is_observed"] or site_name == "obs")
+        }
