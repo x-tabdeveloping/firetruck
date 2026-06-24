@@ -112,11 +112,11 @@ def psis_loo(loglik: dict, show_progress_bar=True) -> float:
     ks = jnp.array(ks)
     log_weights = jnp.stack(log_weights).T
     k_target = jnp.minimum(1 - 1 / jnp.log10(loglik.shape[0]), 0.7)
-    if jnp.any(k > 0.5) and ~jnp.any(k < k_target):
+    if jnp.any(ks > 0.5) and ~jnp.any(ks < k_target):
         warnings.warn(
             "Pareto k>0.5 for some datapoints, the estimated ELPD might be biased."
         )
-    elif jnp.any(k > k_target):
+    elif jnp.any(ks > k_target):
         warnings.warn(
             "Pareto k>0.7 for some datapoints, the estimated ELPD should not be trusted. We recommend you resort to K-fold cross validation instead."
         )
