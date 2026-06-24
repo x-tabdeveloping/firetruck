@@ -83,10 +83,11 @@ def _pareto_smoothing(_loglik):
         warnings.warn(
             "Not enough tail samples for reliable PSIS diagnostic.",
         )
+        return 1 - _loglik, jnp.nan
     tail = jnp.exp(lw_tail) - jnp.exp(lw_cutoff)
     k, sigma = _fit_generalized_pareto(tail)
-    z = jnp.arange(M) + 1
-    smoothed = jnp.log(genpareto_icdf((z - 1 / 2) / M, k, sigma))
+    z = jnp.arange(len(lw_tail)) + 1
+    smoothed = jnp.log(genpareto_icdf((z - 1 / 2) / len(lw_tail), k, sigma))
     log_weights = jnp.ravel(1 - _loglik)
     log_weights = log_weights.at[lw_indices[_lw > lw_cutoff]].set(smoothed)
     log_weights = log_weights.reshape(_loglik.shape)
@@ -125,7 +126,7 @@ def psis_loo(loglik: dict, show_progress_bar=True) -> float:
     )
     elpd_loo = jnp.nansum(elpd_loo_i)
     n = len(elpd_loo_i)
-    elpd_loo_se = jnp.sqrt(jnp.sum(jnp.square(elpd_loo_i - elpd_loo / n)))
+    elpd_loo_se = jnp.sqrt(jnp.nansum(jnp.square(elpd_loo_i - elpd_loo / n)))
     return ELPDResults(
         elpd_loo_i=np.array(elpd_loo_i),
         elpd_loo=float(elpd_loo),
@@ -190,14 +191,14 @@ def compare(elpds: dict[str, ELPDResults], rng_key=None, bb_num_samples=1000):
             )
         else:
             diff = z[i_reference] - z[i_model]
-            mean_diff = jnp.mean(diff)
-            se_diff = jax.scipy.stats.sem(diff)
+            mean_diff = jnp.nanmean(diff)
+            se_diff = jax.scipy.stats.sem(diff, nan_policy="omit")
             p_worse = 1 - dist.Normal(mean_diff, se_diff).cdf(0)
             diff_records.append(
                 dict(
                     model_name=model_name,
                     rank=rank,
-                    w=float(jnp.mean(weight_distributions[model_name])),
+                    w=float(jnp.nanmean(weight_distributions[model_name])),
                     elpd_diff=float(mean_diff),
                     se_diff=float(se_diff),
                     p_worse=float(p_worse),
