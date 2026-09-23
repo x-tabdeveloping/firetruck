@@ -9,7 +9,7 @@ profile = "black"
 
 [project]
 name = "firetruck"
-version = "0.1.6"
+version = "0.1.7"
 description = "NumPyro dialect for mental midgets"
 authors = [
     {name = "Márton Kardos",email = "power.up1163@gmail.com"}
@@ -18,7 +18,8 @@ license = {text = "MIT"}
 readme = "README.md"
 requires-python = ">=3.10"
 dependencies = [
-    "numpyro (>=0.20.0,<0.21.0)"
+    "numpyro (>=0.21.0,<1.0.0)",
+    "pandas >= 2.0.0"
 ]
 
 [project.optional-dependencies]
